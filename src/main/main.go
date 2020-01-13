@@ -53,3 +53,25 @@ func httpHandle(ctx *fasthttp.RequestCtx) {
 	ctx.Response.AppendBodyString("ok")
 	ctx.Response.SetStatusCode(204)
 }
+
+/* http1 to http2 use interface
+
+func getHttpMux() (httpMux, http2Mux *http.ServeMux) {
+
+	httpMux = http.NewServeMux()
+	http2Mux = http.NewServeMux()
+
+	x := make(map[string]handlerFunc, 0)
+	x["/"] = Home
+	x["/v1"] = Hello1
+
+	for k, v := range x {
+		redirectURL := http.RedirectHandler(_HTTP2URLBase+k, 307)
+		httpMux.Handle(k, redirectURL)
+		http2Mux.HandleFunc(k, v)
+	}
+
+	return
+}
+
+ */
