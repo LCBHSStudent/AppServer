@@ -1,0 +1,11 @@
+syntax = "proto2";
+
+package clientH2Req;
+
+/**
+  * @brief proto test
+ */
+
+message proto_t {
+
+}

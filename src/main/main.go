@@ -1,15 +1,16 @@
 package main
 
 import (
-	uConfig "AppServer/src/config"
 	"crypto/tls"
 	"fmt"
-	"github.com/valyala/fasthttp"
 	"log"
 	"net"
 	"net/http"
 	"os"
 	"strconv"
+	
+	uConfig "AppServer/src/config"
+	"github.com/valyala/fasthttp"
 )
 
 var listener net.Listener
@@ -22,7 +23,11 @@ var quitHandler chan struct{}
 func main() {
 	quitHandler = make(chan struct{}, 1)
 	http2Mux = new(http.ServeMux)
-
+	
+	if err = initEveryThing(); err != nil {
+		log.Fatal(err)
+	}
+	
 	if _, err = tls.LoadX509KeyPair(uConfig.PemPath, uConfig.KeyPath); err != nil {
 		os.Exit(uConfig.ErrCertInvalid)
 	}
@@ -32,6 +37,7 @@ func main() {
 		WriteTimeout:	   		uConfig.ServiceWriteTimeout,
 		Handler: 				http2Mux,
 	}
+	defer server.Close()
 
 	if listener, err = net.Listen("tcp", ":" +
 		strconv.Itoa(uConfig.ServicePort)); err != nil {
@@ -41,7 +47,7 @@ func main() {
 	}
 
 	go server.ServeTLS(listener, uConfig.PemPath, uConfig.KeyPath)
-
+	
 	<-quitHandler
 }
 
@@ -52,6 +58,13 @@ func httpHandle(ctx *fasthttp.RequestCtx) {
 
 	ctx.Response.AppendBodyString("ok")
 	ctx.Response.SetStatusCode(204)
+}
+
+func initEveryThing() error {
+	//if err := uConfig.LocalConfigLoader(); err != nil {
+	//	return errors.New("local config error")
+	//}
+	return nil
 }
 
 /* http1 to http2 use interface
