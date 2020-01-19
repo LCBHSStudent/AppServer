@@ -3,9 +3,18 @@ syntax = "proto2";
 package clientH2Req;
 
 /**
-  * @brief proto test
+  * @brief request protoMsg test file.
  */
 
-message proto_t {
-
+message clientMsg {
+    //用户名
+    required string     userName    = 1;
+    //请求类型
+    required uint32     actionCode  = 2;
+    //请求时间（用于与服务器进行校对）
+    optional int32      clntReqYear = 3;
+    optional int32      clntReqMnth = 4;
+    optional int32      clntReqDay  = 5;
+    //cookie相关
+    //...
 }
