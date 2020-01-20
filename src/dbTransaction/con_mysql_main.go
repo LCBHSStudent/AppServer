@@ -44,6 +44,6 @@ func InitDatabaseMySql() {
 	
 }
 
-func DoQuery(code uConfig.RequestCode) {
+func TestSomeQuery(code uConfig.RequestCode) {
 
 }
