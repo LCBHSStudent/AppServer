@@ -10,6 +10,7 @@ import (
 	"strconv"
 	
 	uConfig "AppServer/src/config"
+	"AppServer/src/dbTransaction"
 	"github.com/valyala/fasthttp"
 )
 
@@ -21,6 +22,9 @@ var err		  error
 var quitHandler chan struct{}
 
 func main() {
+	
+	dbTransaction.InitDatabaseMySql()
+	
 	quitHandler = make(chan struct{}, 1)
 	http2Mux = new(http.ServeMux)
 	
