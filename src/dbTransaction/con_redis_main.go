@@ -16,6 +16,6 @@ func TurnRedisPanic() {
 		"panic of redis operation was forbidden")
 }
 
-func InitRedis() {
+func InitDatabaseRedis() {
 
 }

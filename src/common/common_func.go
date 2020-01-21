@@ -1,11 +1,13 @@
 package common
 
-import "fmt"
+import (
+	"log"
+)
 
 func IF(condition bool, trueVal interface{}, falseVal interface{}) {
 	if condition {
-		fmt.Println(trueVal)
+		log.Println(trueVal)
 	} else {
-		fmt.Println(falseVal)
+		log.Println(falseVal)
 	}
 }

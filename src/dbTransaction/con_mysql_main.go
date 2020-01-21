@@ -12,6 +12,7 @@ import (
 var (
 	sqlDB            *sql.DB
 	allowSqlPanic    = true
+	err              error
 //	sqlMutex         sync.Mutex
 )
 
@@ -25,20 +26,37 @@ func DisconnectMySql() {
 	if sqlDB == nil {
 		panic("sql index is referring to nil!")
 	}
-	err := sqlDB.Close()
+	err = sqlDB.Close()
 	
 	if err != nil {
 		panic(err)
 	}
 }
 
-func CreateTable() {}
+func CreateTableIfNotExist(table string) {
+//	dropSt := `
+//DROP TABLE IF EXISTS ` + table + `;
+//`
+//	_, err := sqlDB.Exec(dropSt)
+//	common.IF(err != nil, err, "drop table " + table + " succeed.")
+//
+	
+	createSt := `
+CREATE TABLE IF NOT EXISTS ` + table +`(
+	msgId          int unsigned not null primary key,
+	userName       varchar(32)  not null
+	
+);
+`
+	_, err  = sqlDB.Exec(createSt)
+	common.IF(err != nil, err, "create table " + table + " succeed.")
+}
 
 func InitDatabaseMySql() {
 	var err error
 	
 	sqlDB, err = sql.Open("mysql",
-		"root:password@/server?charset=utf8")
+		"root:password@/square?charset=utf8")
 	//连接数据库，格式 用户名：密码@/数据库名？charset=编码方式
 	
 	if err != nil && allowSqlPanic {
@@ -47,8 +65,9 @@ func InitDatabaseMySql() {
 			"open database-MySql failed.")
 	}
 	
+	CreateTableIfNotExist("squareMsg")
 }
 
-func TestSomeQuery(code uConfig.RequestCode) {
+func TestSomeQuery(code uConfig.RequestCode, queryBody string) {
 
 }
