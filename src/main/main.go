@@ -3,39 +3,35 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	
 	"AppServer/src/dbTransaction"
 	"AppServer/src/requestHandle"
 )
 
-var quitHandler     *context.Context
+var quitHandler     context.Context
+var cancelFunc      context.CancelFunc
 //var quitHandler chan struct{}
 
 func main() {
 	//quitHandler = make(chan struct{}, 1)
-	quitHandler  = new(context.Context)
-	*quitHandler = context.Background()
+	quitHandler, cancelFunc = context.WithCancel(context.Background())
 	
 	fmt.Println(quitHandler)
 	
 	go dbTransaction.InitDatabaseMySql()
 	go dbTransaction.InitDatabaseRedis()
 	
-	requestHandle.SetMainThreadQuitContext(quitHandler)
-	
 	go func() {
-		requestHandle.InitH2Server()
-		requestHandle.CreateH2Listener()
+		requestHandle.SetMainContextCancelFunc(cancelFunc)
+		requestHandle.CreateServerAndListener()
 	}()
 	
-	for {
-		select {
-		case <- (*quitHandler).Done():
-			// do some clear transaction here ...
-			break
-		default:
-			break
-		}
+	select {
+	case <- quitHandler.Done():
+		log.Println("Main thread will be finished soon.")
+		// do some clear transaction here ...
+		return
 	}
 	//<- quitHandler
 }
