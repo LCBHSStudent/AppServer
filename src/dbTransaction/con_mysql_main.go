@@ -38,7 +38,7 @@ func DisconnectMySql() {
 	}
 }
 
-func CreateTableIfNotExist(table string) {
+func CreateTableIfNotExist(table string, tableFormat string) {
 //	dropSt := `
 //DROP TABLE IF EXISTS ` + table + `;
 //`
@@ -47,12 +47,7 @@ func CreateTableIfNotExist(table string) {
 //
 	
 	createSt := `
-CREATE TABLE IF NOT EXISTS ` + table +`(
-	msgId          int unsigned not null primary key,
-	userName       varchar(32)  not null
-	
-);
-`
+CREATE TABLE IF NOT EXISTS ` + table + tableFormat
 	_, err  = sqlDB.Exec(createSt)
 	common.IF(err != nil, err, "create table " + table + " succeed.")
 }
@@ -70,7 +65,30 @@ func InitDatabaseMySql() {
 			"open database-MySql failed.")
 	}
 	
-	CreateTableIfNotExist("squareMsg")
+	CreateTableIfNotExist("user",
+		`
+(
+	user_id               varchar(32) not null primary key,
+	user_name             varchar(32) not null,
+	password              varchar(32) not null,
+	oauth_name            varchar(32),
+	oauth_access_token    varchar(255),
+	oauth_expires         int,
+	location              varchar(128),
+	host                  varchar(32),
+	api_key               varchar(32),
+	api_secret            varchar(255),
+	last_login_date       date
+);
+`)
+	
+	CreateTableIfNotExist("squareMsg",
+		`
+(
+	msgId          int unsigned not null primary key,
+	userName       varchar(32)  not null
+);
+`)
 }
 
 func TestSomeQuery(code uConfig.RequestCode, queryBody string) {
