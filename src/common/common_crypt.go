@@ -9,6 +9,7 @@ import (
 	"log"
 )
 
+// for cmd:GO TEST - unit test
 func Crypt() error {
 	origin := "chikubi"
 	key    := "0123456789123456"

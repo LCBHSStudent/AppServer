@@ -9,6 +9,11 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
+//alter table tableName add columnName varchar(30) 增加列
+//EXEC  sp_rename   'tableName.column1' , 'column2'
+//      (把表名为tableName的column1列名修改为column2)
+//alter table tableName drop column columnName     删除列
+
 var (
 	sqlDB            *sql.DB
 	allowSqlPanic    = true

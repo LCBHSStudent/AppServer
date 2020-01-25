@@ -30,7 +30,11 @@ func main() {
 	select {
 	case <- quitHandler.Done():
 		log.Println("Main thread will be finished soon.")
-		// do some clear transaction here ...
+		// 这就偷懒不做并发了罢
+		dbTransaction.DisconnectDatabaseRedis()
+		dbTransaction.DisconnectMySql()
+		// 清理现场，释放句柄和内存
+		// ...
 		return
 	}
 	//<- quitHandler
