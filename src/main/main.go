@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	
 	"AppServer/src/dbTransaction"
@@ -16,8 +15,6 @@ var cancelFunc      context.CancelFunc
 func main() {
 	//quitHandler = make(chan struct{}, 1)
 	quitHandler, cancelFunc = context.WithCancel(context.Background())
-	
-	fmt.Println(quitHandler)
 	
 	go dbTransaction.InitDatabaseMySql()
 	go dbTransaction.InitDatabaseRedis()

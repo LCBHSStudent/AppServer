@@ -52,6 +52,16 @@ CREATE TABLE IF NOT EXISTS ` + table + tableFormat
 	common.IF(err != nil, err, "create table " + table + " succeed.")
 }
 
+func checkTableExist(table string) bool {
+	query := "SELECT nsp FROM " + table
+	_, err = sqlDB.Query(query)
+	if err != nil && err.Error() == "Error 1054: Unknown column 'nsp' in 'field list'" {
+		return true
+	} else {
+		return false
+	}
+}
+
 func InitDatabaseMySql() {
 	var err error
 	
@@ -65,8 +75,9 @@ func InitDatabaseMySql() {
 			"open database-MySql failed.")
 	}
 	
-	CreateTableIfNotExist("user",
-		`
+	if !checkTableExist("user") {
+		CreateTableIfNotExist("user",
+			`
 (
 	user_id               varchar(32) not null primary key,
 	user_name             varchar(32) not null,
@@ -81,14 +92,17 @@ func InitDatabaseMySql() {
 	last_login_date       date
 );
 `)
+	}
 	
-	CreateTableIfNotExist("squareMsg",
-		`
+	if !checkTableExist("squareMsg") {
+		CreateTableIfNotExist("squareMsg",
+			`
 (
 	msgId          int unsigned not null primary key,
 	userName       varchar(32)  not null
 );
 `)
+	}
 }
 
 func TestSomeQuery(code uConfig.RequestCode, queryBody string) {
