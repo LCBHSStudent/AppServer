@@ -15,6 +15,10 @@ type handlerFunc func(
 	w http.ResponseWriter, r *http.Request,
 )
 
+const (
+	webFilePath = uconfig.ProjectPath + "web_resource/"
+)
+
 var (
 	_listenerList       []*net.Listener
 	_listenerCnt        uint = 0
@@ -85,9 +89,14 @@ func createH2Listener() {
 }
 
 func setHandleStrategy(mux *http.ServeMux) {
+	
+	mux.HandleFunc("/file/",
+		http.FileServer(http.Dir(uconfig.ProjectPath)).ServeHTTP)
+	
 	serveContent := make(map[string]handlerFunc, 0)
 	
-	serveContent["/"] = testMain
+	serveContent["/index/"]  = testIndex
+	serveContent["/"]        = testRoot
 	
 	for path, fun := range serveContent {
 		//redirectURL := http.RedirectHandler("https://localhost:"+strconv.Itoa(uconfig.ServicePort)+
@@ -95,6 +104,7 @@ func setHandleStrategy(mux *http.ServeMux) {
 		//mux.Handle(path, redirectURL)
 		mux.HandleFunc(path, fun)
 	}
+	
 }
 
 func CleanUpAllServerAndListener() {

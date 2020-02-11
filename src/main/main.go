@@ -28,7 +28,7 @@ func main() {
 	case <- quitHandler.Done():
 		log.Println("Main thread will be finished soon.")
 		// 这就偷懒不做并发了罢
-		dbTransaction.DisconnectDatabaseRedis()
+		//dbTransaction.DisconnectDatabaseRedis()
 		dbTransaction.DisconnectMySql()
 		// 清理现场，释放句柄和内存
 		// ...

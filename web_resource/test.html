@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<!-- saved from url=(0045)http://www.imooc.com/article/details/id/78928 -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>
+Golang使用HTTP/2的正确方法_慕课手记
+</title>
+<meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+<meta name="renderer" content="webkit">
+<meta name="mobile-agent" content="format=wml" ;="" url="https://m.imooc.com/article/78928">
+<link rel="alternate" media="only screen and (max-width: 640px)" href="https://m.imooc.com/article/78928">
+<meta name="mobile-agent" content="format=xhtml" ;="" url="https://m.imooc.com/article/78928">
+<meta name="mobile-agent" content="format=html5" ;="" url="https://m.imooc.com/article/78928">
+<meta property="qc:admins" content="77103107776157736375">
+<meta property="wb:webmaster" content="c4f857219bfae3cb">
+<meta http-equiv="Access-Control-Allow-Origin" content="*">
+<meta http-equiv="Cache-Control" content="no-transform ">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+<link rel="dns-prefetch" href="http://www.imooc.com/">
+<link rel="dns-prefetch" href="http://img.imooc.com/">
+<link rel="dns-prefetch" href="http://img.mukewang.com/">
+<link rel="apple-touch-icon" sizes="76x76" href="http://www.imooc.com/static/img/common/touch-icon-ipad.png">
+<link rel="apple-touch-icon" sizes="120x120" href="http://www.imooc.com/static/img/common/touch-icon-iphone-retina.png">
+<link rel="apple-touch-icon" sizes="152x152" href="http://www.imooc.com/static/img/common/touch-icon-ipad-retina.png">
+
+
+
+<meta name="Description" content="golang在http/2这块做的比较早，但是因为历史原因导致API比较令人迷惑，网上很多同学在抱怨。我这里记录一下如何正确的实施HTTP/2的客户端与服务端。HTTP/2协议HT">
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="./Golang使用HTTP_2的正确方法_慕课手记_files/moco.min.css" type="text/css">
+<link rel="stylesheet" href="./Golang使用HTTP_2的正确方法_慕课手记_files/swiper-3.4.2.min.css">
+
+
+
+
+<script src="./Golang使用HTTP_2的正确方法_慕课手记_files/push.js.下载"></script><script type="text/javascript" async="" src="./Golang使用HTTP_2的正确方法_慕课手记_files/rt.js.下载"></script><script src="https://hm.baidu.com/hm.js?f0cfcccd7b1393990c78efdeebff3968"></script><script async="" type="text/javascript" id="zhuge-js" src="./Golang使用HTTP_2的正确方法_慕课手记_files/zhuge.min.js.下载"></script><script type="text/javascript">
+
+var OP_CONFIG={"module":"article","page":"details"};
+var isLogin = 0;
+var is_choice = "";
+var seajsTimestamp="v=202002071722";
+var _msg_unread = 0; 
+var _not_unread = 0; 
+var _cart_num = 0;
+</script>
+
+
+
+
+
+
+<link href="./Golang使用HTTP_2的正确方法_慕课手记_files/captcha.min.css" rel="stylesheet">
+<script type="text/javascript" src="./Golang使用HTTP_2的正确方法_慕课手记_files/youziku.api.min.js.下载"></script><style type="text/css">@font-face {font-family: 'SourceHanSerif-1abdcdaa641f2cf';src: url('//cdn.repository.webfont.com/webfonts/vipjs/127695/47753/5d356991344aa66f6e7c76e5.gif');src: url('//cdn.repository.webfont.com/webfonts/vipjs/127695/47753/5d356991344aa66f6e7c76e5.gif?#iefix') format('embedded-opentype'),url('//cdn.repository.webfont.com/webfonts/vipjs/127695/47753/5d356991344aa66f6e7c76e5.png') format('woff2'),url('//cdn.repository.webfont.com/webfonts/vipjs/127695/47753/5d356991344aa66f6e7c76e5.bmp') format('woff'),url('//cdn.repository.webfont.com/webfonts/vipjs/127695/47753/5d356991344aa66f6e7c76e5.jpg') format('truetype');font-weight: normal;font-style: normal;}</style><style type="text/css">.detail-title, .detail-content h1,.detail-content h2,.detail-content h3,.detail-content h4,.detail-content h5,.detail-content h6{font-family:'SourceHanSerif-1abdcdaa641f2cf'  !important; }</style><style type="text/css">@font-face {font-family: 'HYQiHei-55S1abdcdab7d1f2cf';src: url('//cdn.repository.webfont.com/webfonts/vipjs/127695/47788/5d356992344aa66f6e7c76e9.gif');src: url('//cdn.repository.webfont.com/webfonts/vipjs/127695/47788/5d356992344aa66f6e7c76e9.gif?#iefix') format('embedded-opentype'),url('//cdn.repository.webfont.com/webfonts/vipjs/127695/47788/5d356992344aa66f6e7c76e9.png') format('woff2'),url('//cdn.repository.webfont.com/webfonts/vipjs/127695/47788/5d356992344aa66f6e7c76e9.bmp') format('woff'),url('//cdn.repository.webfont.com/webfonts/vipjs/127695/47788/5d356992344aa66f6e7c76e9.jpg') format('truetype');font-weight: normal;font-style: normal;}</style><style type="text/css">.detail-content ul,.detail-content ol,.detail-content p, .detail-content pre, .detail-content code, #code-copy{font-family:'HYQiHei-55S1abdcdab7d1f2cf'  !important; }</style><style type="text/css">@font-face {font-family: 'HYQiHei-70J1abdcdac771f2cf';src: url('//cdn.repository.webfont.com/webfonts/vipjs/127695/47481/5d356992344aa66f6e7c76ed.gif');src: url('//cdn.repository.webfont.com/webfonts/vipjs/127695/47481/5d356992344aa66f6e7c76ed.gif?#iefix') format('embedded-opentype'),url('//cdn.repository.webfont.com/webfonts/vipjs/127695/47481/5d356992344aa66f6e7c76ed.png') format('woff2'),url('//cdn.repository.webfont.com/webfonts/vipjs/127695/47481/5d356992344aa66f6e7c76ed.bmp') format('woff'),url('//cdn.repository.webfont.com/webfonts/vipjs/127695/47481/5d356992344aa66f6e7c76ed.jpg') format('truetype');font-weight: normal;font-style: normal;}</style><style type="text/css">.detail-content strong{font-family:'HYQiHei-70J1abdcdac771f2cf'  !important; }</style>
+<script type="text/javascript">
+$youziku.load(".detail-title, .detail-content h1,.detail-content h2,.detail-content h3,.detail-content h4,.detail-content h5,.detail-content h6", "37af461390fa4d138f5c3d277f7286dc", "SourceHanSerifSC-Heavy"); // 思源宋体heavy
+$youziku.load(".detail-content blockquote", "d9a0d855583142c3b2cc3bf1646a8473", "SourceHanSerifSC-Regular"); // 思源宋体regular
+$youziku.load(".detail-content ul,.detail-content ol,.detail-content p, .detail-content pre, .detail-content code, #code-copy", "3d84aabcf9e44b6f8c6fa91c61fa926e", "HYQiHei-55S"); // 汉仪旗黑55s
+$youziku.load(".detail-content strong", "fd94fff3a17546a28913a79613bddcec", "HYQiHei-77S"); // 汉仪旗黑70s
+
+$youziku.draw();
+</script>
+<script>
+var isLogin=0
+var _hmt = _hmt || [];
+var pageInfo = {
+	canForward:"1",
+    id: "78928",
+    praiseNum:"7"
+}
+var dtid = "76979";
+var marking = "be";
+var user = {
+    uid : ''
+}
+var authorUid = {
+    uid : '3900685'
+}
+var curPage = 'details'
+
+var a_id = 78928
+
+// 为html转码，article_content 为新markdown编辑器接收的初始化内容
+var article_content = "&lt;p&gt;golang在http/2这块做的比较早，但是因为历史原因导致API比较令人迷惑，网上很多同学在抱怨。&lt;!--more--&gt;&lt;/p&gt;&lt;p&gt;我这里记录一下如何正确的实施HTTP/2的客户端与服务端。&lt;/p&gt;&lt;h2&gt;HTTP/2协议&lt;/h2&gt;&lt;p&gt;HTTP/2协议握手分2种方式，一种叫h2，一种叫h2c。&lt;/p&gt;&lt;p&gt;h2要求必须使用TLS加密，在TLS握手期间会顺带完成HTTPS/2协议的协商，如果协商失败（比如客户端不支持或者服务端不支持），则会使用HTTPS/1继续后续通讯。&lt;/p&gt;&lt;p&gt;h2c不使用TLS，而是多了一次基于HTTP协议的握手往返来完成向HTTP/2协议的升级，一般不建议使用。&lt;/p&gt;&lt;h2&gt;GO标准库&lt;/h2&gt;&lt;p&gt;GO的http库默认支持HTTP/2协议，只要我们使用TLS则会默认启动HTTP/2特性。&lt;/p&gt;&lt;p&gt;http库在设计API时并没有支持用户使用h2c，而是鼓励使用h2。&lt;/p&gt;&lt;p&gt;只要我们使用TLS，则http库就会默认进行HTTPS/2协商，协商失败则蜕化为HTTPS/1。&lt;/p&gt;&lt;p&gt;&lt;strong&gt;让很多开发者迷惑的点在于，当我们希望对http Client或者Server做一些更加定制化的配置时，就会覆盖掉http库的默认行为，从而导致无法启用HTTP/2协议。&lt;/strong&gt;&lt;/p&gt;&lt;p&gt;下面我就会告诉大家，到底怎么保证HTTP/2协议的启用。&lt;/p&gt;&lt;h1&gt;服务端&lt;/h1&gt;&lt;p&gt;我们明确一定要用h2模式，也就是牺牲TLS加密的时间，但是换来的就是HTTP/2的使用便捷性。&lt;/p&gt;&lt;h2&gt;制作证书&lt;/h2&gt;&lt;p&gt;我们首先需要为服务端制作证书和私钥，其中证书会在收到请求时发回给客户端。&lt;/p&gt;&lt;p&gt;证书是我们自签的，没有第三方CA作验证，所以客户端需要关闭校验证书有效性的特性。&lt;/p&gt;&lt;pre&gt;1，生成服务端私钥\nopenssl&amp;nbsp;genrsa&amp;nbsp;-out&amp;nbsp;default.key&amp;nbsp;2048\n2，生成服务端证书\nopenssl&amp;nbsp;req&amp;nbsp;-new&amp;nbsp;-x509&amp;nbsp;-key&amp;nbsp;default.key&amp;nbsp;-out&amp;nbsp;default.pem&amp;nbsp;-days&amp;nbsp;3650&lt;/pre&gt;&lt;p&gt;default.key是私钥，default.pem是证书。&lt;/p&gt;&lt;h2&gt;校验证书&lt;/h2&gt;&lt;p&gt;因为我们是X509格式签名的证书，所以程序做好先做一下有效性校验：&lt;/p&gt;&lt;pre&gt;	//&amp;nbsp;TLS证书解析验证\n	if&amp;nbsp;_,&amp;nbsp;err&amp;nbsp;=&amp;nbsp;tls.LoadX509KeyPair(G_config.ServerPem,&amp;nbsp;G_config.ServerKey);&amp;nbsp;err&amp;nbsp;!=&amp;nbsp;nil&amp;nbsp;{\n		return&amp;nbsp;common.ERR_CERT_INVALID\n	}&lt;/pre&gt;&lt;p&gt;确认证书有效后，我们最终通过serverTLS传入证书和私钥，启动一个HTTPS/2服务：&lt;/p&gt;&lt;pre&gt;	//&amp;nbsp;HTTP/2&amp;nbsp;TLS服务\n	server&amp;nbsp;=&amp;nbsp;&amp;amp;http.Server{\n		ReadTimeout:&amp;nbsp;time.Duration(G_config.ServiceReadTimeout)&amp;nbsp;*&amp;nbsp;time.Millisecond,\n		WriteTimeout:&amp;nbsp;time.Duration(G_config.ServiceWriteTimeout)&amp;nbsp;*&amp;nbsp;time.Millisecond,\n		Handler:&amp;nbsp;mux,\n	}\n\n	//&amp;nbsp;监听端口\n	if&amp;nbsp;listener,&amp;nbsp;err&amp;nbsp;=&amp;nbsp;net.Listen(&amp;quot;tcp&amp;quot;,&amp;nbsp;&amp;quot;:&amp;quot;&amp;nbsp;+&amp;nbsp;strconv.Itoa(G_config.ServicePort));&amp;nbsp;err&amp;nbsp;!=&amp;nbsp;nil&amp;nbsp;{\n		return\n	}\n\n	//&amp;nbsp;拉起服务\n	go&amp;nbsp;server.ServeTLS(listener,&amp;nbsp;G_config.ServerPem,&amp;nbsp;G_config.ServerKey)&lt;/pre&gt;&lt;p&gt;除了使用ServeTLS来启动支持HTTPS/2特性的服务端之外，还可以通过&lt;a href=&quot;https://godoc.org/golang.org/x/net/http2#ConfigureServer&quot;&gt;http2.ConfigureServer&lt;/a&gt;来为http.Server启动HTTPS/2特性并直接使用Serve来启动服务。&lt;/p&gt;&lt;h2&gt;客户端&lt;/h2&gt;&lt;p&gt;客户端最重要的是配置Transport，所谓Transport就是底层的连接管理器，包括了协议的处理能力。&lt;/p&gt;&lt;p&gt;因为我们有很多定制化Client配置的需求，所以我们自己生成了一个Transport而不是内置的Transport：&lt;/p&gt;&lt;pre&gt;	transport&amp;nbsp;=&amp;nbsp;&amp;amp;http.Transport{\n		TLSClientConfig:&amp;nbsp;&amp;amp;tls.Config{InsecureSkipVerify:&amp;nbsp;true,},	//&amp;nbsp;不校验服务端证书\n		MaxIdleConns:&amp;nbsp;G_config.GatewayMaxConnection,\n		MaxIdleConnsPerHost:&amp;nbsp;G_config.GatewayMaxConnection,\n		IdleConnTimeout:&amp;nbsp;time.Duration(G_config.GatewayIdleTimeout)&amp;nbsp;*&amp;nbsp;time.Second,	//&amp;nbsp;连接空闲超时\n	}&lt;/pre&gt;&lt;p&gt;其中TLS配置声明了InsecureSkipVerify=true，表示不向CA校验证书的有效性。&lt;/p&gt;&lt;p&gt;类似于服务端，因为我们没有使用内置的Client Transport，所以我们需要使用&lt;a href=&quot;https://godoc.org/golang.org/x/net/http2#ConfigureTransport&quot;&gt;http2.ConfigureTransport&lt;/a&gt;来启动HTTPS/2特性：&lt;/p&gt;&lt;pre&gt;	//&amp;nbsp;启动HTTP/2协议\n	http2.ConfigureTransport(transport)&lt;/pre&gt;&lt;p&gt;最后将Transport配置给Client，负责底层的连接与协议管理：&lt;/p&gt;&lt;pre&gt;	//&amp;nbsp;HTTP/2&amp;nbsp;客户端\n	gateConn.client&amp;nbsp;=&amp;nbsp;&amp;amp;http.Client{\n		Transport:&amp;nbsp;transport,\n		Timeout:&amp;nbsp;time.Duration(G_config.GatewayTimeout)&amp;nbsp;*&amp;nbsp;time.Millisecond,&amp;nbsp;//&amp;nbsp;请求超时\n	}&lt;/pre&gt;&lt;h1&gt;最后&lt;/h1&gt;&lt;p&gt;首先理解h2和h2c的区别，然后明确Go语言推荐使用h2。&lt;/p&gt;&lt;p&gt;最后，当我们没有使用默认的http配置时，我们需要通过http2.ConfigureXXX重新配置启用HTTP2/S特性。&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;";
+// 为html反转码
+article_content = article_content.replace(/\&lt\;/g, "<").replace(/\&gt\;/g, ">").replace(/\&amp\;/g, "&").replace(/\&quot\;/g, '"').replace(/\&apos\;/g, "'");
+// 递归遍历dom，处理图片懒加载
+function dfs(root) {
+	var nodes = Array.prototype.slice.call(root.children);
+	if (nodes.length) {
+		nodes.forEach(function (node) {
+			if(node.tagName == 'IMG') {
+				var src = node.src;
+				node.setAttribute('data-original', src);
+				node.setAttribute('class', 'lazyload');
+				node.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsQAAA7EAZUrDhsAAAANSURBVBhXYzh8+PB/AAffA0nNPuCLAAAAAElFTkSuQmCC';
+			}
+			dfs(node);
+		});
+	}
+}
+// 创建手记内容dom节点
+var articleEl = document.createElement("div");
+articleEl.innerHTML = article_content;
+// 遍历手记dom树
+dfs(articleEl);
+</script>
+
+
+
+<script type="text/javascript">
+
+eval(function(p,a,c,k,e,d){e=function(c){return(c<a?"":e(parseInt(c/a)))+((c=c%a)>35?String.fromCharCode(c+29):c.toString(36))};if(!''.replace(/^/,String)){while(c--)d[e(c)]=k[c]||e(c);k=[function(e){return d[e]}];e=function(){return'\\w+'};c=1;};while(c--)if(k[c])p=p.replace(new RegExp('\\b'+e(c)+'\\b','g'),k[c]);return p;}('!4(){3 b={};3 d=0;3 5=[{c:\'//k.p.h/k/m/K/L.q\',6:0},{c:\'//m.p.h/I/J-O.q\',6:0}];3 u=4(){3 j,n=e P("(^| )"+"l=([^;]*)(;|$)");9(j=r.s.M(n)){o N(j[2])}D{o C}};3 A=4(t){3 B=u();3 8=e H();8.G(8.F()+E*v*v*10);r.s="l="+t+";13="+8.14()+";15=/;T=U.h";9(t&&t!=B){R.Y.Z()}};3 x=4(i){3 7=e X();7.V=4(){W(b[i]);b[i]=C;a(i,0)};7.Q=4(){a(i,1)};b[i]=S(4(){7.z="";a(i,1)},11);7.z=5[i].c+"?t="+12.16()};3 a=4(y,6){d++;5[y].6=6;9(d==5.f){3 g=0;w(3 i=0;i<5.f;i++){9(5[i].6==1){g=1}}A(g)}};w(3 i=0;i<5.f;i++){x(i)}}()',62,69,'|||var|function|urls|flag|imgobj|exp|if|callback|timer|url|count|new|length|error|com||arr|static|IMCDNS|img|reg|return|mukewang|png|document|cookie||getcookie|60|for|checkCdn|index|src|setcookie|_0|null|else|24|getTime|setTime|Date|images|unknow|common|logo|match|unescape|80|RegExp|onerror|window|setTimeout|domain|imooc|onload|clearTimeout|Image|location|reload|1000|3000|Math|expires|toGMTString|path|random'.split('|'),0,{}))
+
+</script>
+<script src="./Golang使用HTTP_2的正确方法_慕课手记_files/init.js.下载" async=""></script>
+<link rel="stylesheet" href="./Golang使用HTTP_2的正确方法_慕课手记_files/saved_resource" type="text/css">
+<script charset="utf-8" async="" src="./Golang使用HTTP_2的正确方法_慕课手记_files/seajs-text.js.下载"></script><script charset="utf-8" async="" src="./Golang使用HTTP_2的正确方法_慕课手记_files/common.js.下载"></script><script charset="utf-8" async="" src="./Golang使用HTTP_2的正确方法_慕课手记_files/jquery.js.下载"></script><script charset="utf-8" async="" src="./Golang使用HTTP_2的正确方法_慕课手记_files/string.js.下载"></script><script charset="utf-8" async="" src="./Golang使用HTTP_2的正确方法_慕课手记_files/userinfo.js.下载"></script><script charset="utf-8" async="" src="./Golang使用HTTP_2的正确方法_慕课手记_files/cart.js.下载"></script><script charset="utf-8" async="" src="./Golang使用HTTP_2的正确方法_慕课手记_files/cookie.js.下载"></script><script charset="utf-8" async="" src="./Golang使用HTTP_2的正确方法_慕课手记_files/suggest.js.下载"></script><script charset="utf-8" async="" src="./Golang使用HTTP_2的正确方法_慕课手记_files/store.js.下载"></script><script charset="utf-8" async="" src="./Golang使用HTTP_2的正确方法_慕课手记_files/json.js.下载"></script><script charset="utf-8" async="" src="./Golang使用HTTP_2的正确方法_慕课手记_files/im.js.下载"></script><script charset="utf-8" async="" src="./Golang使用HTTP_2的正确方法_慕课手记_files/details.js.下载"></script><script charset="utf-8" async="" src="./Golang使用HTTP_2的正确方法_慕课手记_files/advertiseCheck.js.下载"></script><script charset="utf-8" async="" src="./Golang使用HTTP_2的正确方法_慕课手记_files/moco.min.js.下载"></script><script charset="utf-8" async="" src="./Golang使用HTTP_2的正确方法_慕课手记_files/socket.io.min.js.下载"></script><script charset="utf-8" async="" src="./Golang使用HTTP_2的正确方法_慕课手记_files/prettify.js.下载"></script><link charset="utf-8" rel="stylesheet" href="./Golang使用HTTP_2的正确方法_慕课手记_files/prettify.css"><script charset="utf-8" async="" src="./Golang使用HTTP_2的正确方法_慕课手记_files/jquery.lazyload.js.下载"></script><script charset="utf-8" async="" src="./Golang使用HTTP_2的正确方法_慕课手记_files/ueditor.parse.js.下载"></script><script charset="utf-8" async="" src="./Golang使用HTTP_2的正确方法_慕课手记_files/layer.min.js.下载"></script><link charset="utf-8" rel="stylesheet" href="./Golang使用HTTP_2的正确方法_慕课手记_files/layer.css"><link charset="utf-8" rel="stylesheet" href="./Golang使用HTTP_2的正确方法_慕课手记_files/ueditor.css"><script charset="utf-8" async="" src="./Golang使用HTTP_2的正确方法_慕课手记_files/addCopy.js.下载"></script><script charset="utf-8" async="" src="./Golang使用HTTP_2的正确方法_慕课手记_files/course_tipoff.js.下载"></script><script charset="utf-8" async="" src="./Golang使用HTTP_2的正确方法_慕课手记_files/discoverycount.js.下载"></script><script charset="utf-8" async="" src="./Golang使用HTTP_2的正确方法_慕课手记_files/praise.js.下载"></script><script charset="utf-8" async="" src="./Golang使用HTTP_2的正确方法_慕课手记_files/common.js(1).下载"></script><script charset="utf-8" async="" src="./Golang使用HTTP_2的正确方法_慕课手记_files/verify-code.js.下载"></script><script charset="utf-8" async="" src="./Golang使用HTTP_2的正确方法_慕课手记_files/mo.min.js.下载"></script><script charset="utf-8" async="" src="./Golang使用HTTP_2的正确方法_慕课手记_files/juicer.min.js.下载"></script><script charset="utf-8" async="" src="./Golang使用HTTP_2的正确方法_慕课手记_files/jquery.qrcode.min.js.下载"></script><script charset="utf-8" async="" src="./Golang使用HTTP_2的正确方法_慕课手记_files/limitinput.js.下载"></script><script charset="utf-8" async="" src="./Golang使用HTTP_2的正确方法_慕课手记_files/publish.js.下载"></script><script charset="utf-8" async="" src="./Golang使用HTTP_2的正确方法_慕课手记_files/detail.js.下载"></script><script charset="utf-8" async="" src="./Golang使用HTTP_2的正确方法_慕课手记_files/forward.js.下载"></script><script charset="utf-8" async="" src="./Golang使用HTTP_2的正确方法_慕课手记_files/detail_forward.js.下载"></script><script src="./Golang使用HTTP_2的正确方法_慕课手记_files/share.js.下载"></script><link rel="stylesheet" href="./Golang使用HTTP_2的正确方法_慕课手记_files/share_style0_16.css"><link id="syntaxhighlighter_css" rel="stylesheet" type="text/css" href="./Golang使用HTTP_2的正确方法_慕课手记_files/shCoreDefault.css"><script id="syntaxhighlighter_js" src="./Golang使用HTTP_2的正确方法_慕课手记_files/shCore.js.下载" type="text/javascript" defer="defer"></script><style id="chartsContainerHeight">
+.edui-chart-container { height:500px}</style><style id="list">
+body ol,body ul{margin:0;padding:0;}body .list-paddingleft-1{padding-left:0}
+body .list-paddingleft-2{padding-left:20px}
+body .list-paddingleft-3{padding-left:40px}</style></head>
+
+<body data-gr-c-s-loaded="true">
+
+
+<div id="globalTopBanner" style=""></div>
+<div id="new_header" class="special-header">
+    <div class="page-container new-header clearfix" id="nav">
+        <ul class="nav-item">
+            <li><a href="http://www.imooc.com/" target="_self" class="imooc">慕课网首页</a></li>
+            <li><a href="http://www.imooc.com/course/list" target="_self">免费课程</a></li>
+            <li><a href="http://coding.imooc.com/" target="_self">实战课程</a></li>
+            <li><a href="http://class.imooc.com/" class="" target="_self">金职位<i class="icn-new"></i></a></li>
+            <li><a href="http://www.imooc.com/read" target="_self">专栏</a></li>
+            <li><a href="http://www.imooc.com/wenda" target="_self">猿问</a></li>
+            <li><a href="http://www.imooc.com/article" class="active" target="_self">手记</a></li>
+            <!-- <li><a href="//job.imooc.com" target="_self">猿聘<i class="icn-new"></i></a></li> -->
+        </ul>
+        <div class="header-right">
+            <div class="app-download" id="js-app-load">
+                <a href="http://www.imooc.com/mobile/app" target="_blank">下载APP</a>
+                <div class="app-load-box clearfix js-load-box">    
+                    <div class="mobile-load-box">
+                        <h4>慕课网APP - 随时随地学编程</h4>
+                        <img src="./Golang使用HTTP_2的正确方法_慕课手记_files/appload.png" class="l">
+                        <div class="r">
+                            <a class="app-load-btn" href="https://itunes.apple.com/cn/app/mu-ke-wang/id722179140?mt=8" target="_blank"><i class="icon-apple"></i>App Store下载</a>
+                            <a class="app-load-btn" href="http://www.imooc.com/mobile/appdown" target="_blank"><i class="icon-android"></i>Android下载</a>
+                            <p>扫描下载慕课网APP</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="search-box">
+                <a href="javascript:void(0);" id="common-nav-search">
+                    <i class="imv2-search2"></i>
+                </a>
+                <div class="input-search hide" id="common-input-search">
+                    <div class="input-box">
+                        <input type="text" class="nav-search-input" autocomplete="off">
+                        <a href="javascript:void(0);" class="nav-searchBtn js-nav-searchBtn">
+                            <i class="imv2-search2"></i>
+                        </a>
+                    </div>
+                    <div class="nav-search-box hide">
+                        <div class="hot">
+                            <h2>热搜</h2>
+                            <div class="hot-box">
+                            </div>
+                        </div>
+                        <div class="history hide">
+                            <h2>最近搜索<a href="javascript:void(0);" class="history-clear js-clear-history">清空</a></h2>
+                            <div class="history-box">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="nav-correlate-box hide">
+                        <div class="correlate">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="shop-cart" id="shop-cart">
+                <a href="http://order.imooc.com/pay/cart" class="shop-cart-icon" target="_blank">
+                    <span class="imv2-shopping-cart2 js-endcart"></span><span class="shopping_icon js-cart-num" data-ordernum="0" data-cartnum="0" style="display: none">0</span>
+                </a>
+                <div class="my-cart" id="js-my-cart"></div>
+            </div>
+                        <div id="login-area">
+                <ul class="header-unlogin clearfix">
+                    <li class="header-signin">
+                        <a href="http://www.imooc.com/user/newlogin" id="js-signin-btn">登录</a> / <a href="http://www.imooc.com/user/newsignup" id="js-signup-btn">注册</a>
+                    </li>
+                </ul>
+            </div>
+                    </div>
+    </div>
+</div>
+<div id="sub-header">
+            <div class="sub-container" id="sub-nav">
+            <a class="article-logo" href="http://www.imooc.com/article"><img src="./Golang使用HTTP_2的正确方法_慕课手记_files/article-logo.png" alt=""></a>
+            <div class="operate-area clearfix">
+                <span>
+                    <a href="http://www.imooc.com/article/publish" target="_blank" class="btn btn-blue btn-article">写文章</a>
+                </span>
+                
+                
+            </div>
+            <div class="search-warp clearfix" style="min-width: 32px;">
+                
+
+                <div class="search-area" data-search="top-banner">
+                    <input class="search-input" data-suggest-trigger="suggest-trigger" placeholder="搜索感兴趣的知识和文章" type="text" autocomplete="off">
+                    <input type="hidden" class="btn_search" data-search-btn="search-btn">
+                    <ul class="search-area-result" data-suggest-result="suggest-result">
+                    </ul>
+                </div>
+                <div class="showhide-search" data-show="no"><i class="icon-search"></i></div>
+            </div>
+            
+        </div>
+    </div>
+<div class="bindHintBox js-bindHintBox hide">
+    <div class="pr">
+        为了账号安全，请及时绑定邮箱和手机<a href="http://www.imooc.com/user/setbindsns" class="ml20 color-red" target="_blank">立即绑定</a>
+        <button class="closeBindHint js-closeBindHint" type="button"></button>
+        <div class="arrow"> </div>
+    </div>
+</div>
+
+
+<div id="main">
+
+<div class="main_con clearfix">
+	<!-- 分享&收藏 -->
+	<div class="active-box js-active-fixed">
+		<div class="share-box">
+			<div class="small-share">
+				<ul class="share-wrap">
+					<li class="weichat-posi">
+						<!-- 推荐 --> 
+						<div class="praise-box">
+														<button id="js-praise-left"><span class="imv2-thumb_up"></span></button>
+																						<span class="praise-num">7</span>
+													</div>
+						<!-- 推荐end -->
+
+
+
+						<div class="icon-warp">
+						  <div class="follow-warp">
+							<a onclick="_hmt.push([&#39;_trackEvent&#39;, &#39;sjtj_left&#39;, &#39;share&#39;, &#39;pl&#39;])" data-track="pl-1-1" href="http://www.imooc.com/article/details/id/78928#comment" class="icon-nav imv2-chat_bubble" title="评论"></a>  
+							 							 	<span class="comment-num">评论</span>
+							 						  </div>
+						</div>
+						<div class="icon-warp">
+							 								<div class="follow-warp">
+									<a onclick="_hmt.push([&#39;_trackEvent&#39;, &#39;sjtj_left&#39;, &#39;share&#39;, &#39;sc&#39;])" data-track="sc-1-1" data-id="78928" href="javascript:" class="js-follow dc-follow  icon-nav icon-star2 " title="收藏"></a>
+																			<span>14</span>
+																	</div>
+													</div>  
+						<div class="icon-warp ">
+							<a class="js-forward-btn imv2-forward1 icon-nav" href="http://www.imooc.com/article/details/id/78928#">
+								<span class="sharetext">转发</span>
+							</a>
+							<!-- 只在第一次访问显示 -->
+														<p class="tip js-tip">
+								<span class="text">点击这里，将文章分享到自己的动态</span>
+								<span class="js-close imv2-close"></span>
+							</p>
+													</div>
+						<p class="line"></p>  
+						
+						<div class="bdsharebuttonbox weichat-style bdshare-button-style0-16" data-bd-bind="1581065995394">
+							<div class="sharetext">分享</div>
+							<div class="icon-warp2">
+								<a onclick="_hmt.push([&#39;_trackEvent&#39;, &#39;sjtj_left&#39;, &#39;share&#39;, &#39;wx&#39;])" data-track="letfshare-1-1" href="http://www.imooc.com/article/details/id/78928#" class="bds_weixin icon-nav icon-share-weichat share-icon" data-cmd="weixin" title="分享到微信"></a>
+							</div>
+							<div class="icon-warp2">
+								<a onclick="_hmt.push([&#39;_trackEvent&#39;, &#39;sjtj_left&#39;, &#39;share&#39;, &#39;wb&#39;])" data-track="letfshare-1-2" href="http://www.imooc.com/article/details/id/78928#" class="bds_tsina icon-nav icon-share-weibo share-icon" data-cmd="tsina" title="分享到新浪微博"></a>
+							</div>
+							<div class="icon-warp2">
+								<a onclick="_hmt.push([&#39;_trackEvent&#39;, &#39;sjtj_left&#39;, &#39;share&#39;, &#39;qq&#39;])" data-track="letfshare-1-3" href="http://www.imooc.com/article/details/id/78928#" class="bds_qzone icon-nav icon-share-qq share-icon" data-cmd="qzone" title="分享到QQ空间"></a>    
+							</div>                               
+						</div>
+					</li>
+				</ul>
+			</div>
+		</div>
+	</div>
+	<!-- 分享&收藏 end -->
+	<div class="left_essay l">
+		<div class="part_essay js-part_essay">
+							<div class="originalImg"></div>
+						<!-- 面包屑 -->
+			<div class="detail-path">
+				<a class="imooc" target="_blank" href="http://www.imooc.com/"><i class="imv2-imooc"></i></a>
+				<a href="http://www.imooc.com/article" target="_blank">手记</a>  /<a href="http://www.imooc.com/article/be" target="_blank" class="js-column">后端开发</a>
+			</div>
+			<!-- 面包屑end -->       
+			<div class="detail-title-wrap">
+				<h1 class="detail-title">
+					<span class="d-t js-title">Golang使用HTTP/2的正确方法</span>
+				</h1>
+				<div class="dc-profile clearfix">
+					<div class="l">
+						<span class="spacer">2018.09.14 11:03</span>
+						<span class="spacer spacer-2">6643浏览</span>
+					</div>
+					<div class="r path-right-box">
+						<div class="rinfo l">
+																					
+							
+						</div> 
+					</div>	
+				</div>
+			</div> 
+
+			 <!-- 手记详情 -->
+			<div class="detail-content-wrap">  
+				<div class="detail-content js-lookimg long-content">
+					
+					<div><p>golang在http/2这块做的比较早，但是因为历史原因导致API比较令人迷惑，网上很多同学在抱怨。<!--more--></p><p>我这里记录一下如何正确的实施HTTP/2的客户端与服务端。</p><h2>HTTP/2协议</h2><p>HTTP/2协议握手分2种方式，一种叫h2，一种叫h2c。</p><p>h2要求必须使用TLS加密，在TLS握手期间会顺带完成HTTPS/2协议的协商，如果协商失败（比如客户端不支持或者服务端不支持），则会使用HTTPS/1继续后续通讯。</p><p>h2c不使用TLS，而是多了一次基于HTTP协议的握手往返来完成向HTTP/2协议的升级，一般不建议使用。</p><h2>GO标准库</h2><p>GO的http库默认支持HTTP/2协议，只要我们使用TLS则会默认启动HTTP/2特性。</p><p>http库在设计API时并没有支持用户使用h2c，而是鼓励使用h2。</p><p>只要我们使用TLS，则http库就会默认进行HTTPS/2协商，协商失败则蜕化为HTTPS/1。</p><p><strong>让很多开发者迷惑的点在于，当我们希望对http Client或者Server做一些更加定制化的配置时，就会覆盖掉http库的默认行为，从而导致无法启用HTTP/2协议。</strong></p><p>下面我就会告诉大家，到底怎么保证HTTP/2协议的启用。</p><h1>服务端</h1><p>我们明确一定要用h2模式，也就是牺牲TLS加密的时间，但是换来的就是HTTP/2的使用便捷性。</p><h2>制作证书</h2><p>我们首先需要为服务端制作证书和私钥，其中证书会在收到请求时发回给客户端。</p><p>证书是我们自签的，没有第三方CA作验证，所以客户端需要关闭校验证书有效性的特性。</p><pre>1，生成服务端私钥
+openssl&nbsp;genrsa&nbsp;-out&nbsp;default.key&nbsp;2048
+2，生成服务端证书
+openssl&nbsp;req&nbsp;-new&nbsp;-x509&nbsp;-key&nbsp;default.key&nbsp;-out&nbsp;default.pem&nbsp;-days&nbsp;3650</pre><p>default.key是私钥，default.pem是证书。</p><h2>校验证书</h2><p>因为我们是X509格式签名的证书，所以程序做好先做一下有效性校验：</p><pre>	//&nbsp;TLS证书解析验证
+	if&nbsp;_,&nbsp;err&nbsp;=&nbsp;tls.LoadX509KeyPair(G_config.ServerPem,&nbsp;G_config.ServerKey);&nbsp;err&nbsp;!=&nbsp;nil&nbsp;{
+		return&nbsp;common.ERR_CERT_INVALID
+	}</pre><p>确认证书有效后，我们最终通过serverTLS传入证书和私钥，启动一个HTTPS/2服务：</p><pre>	//&nbsp;HTTP/2&nbsp;TLS服务
+	server&nbsp;=&nbsp;&amp;http.Server{
+		ReadTimeout:&nbsp;time.Duration(G_config.ServiceReadTimeout)&nbsp;*&nbsp;time.Millisecond,
+		WriteTimeout:&nbsp;time.Duration(G_config.ServiceWriteTimeout)&nbsp;*&nbsp;time.Millisecond,
+		Handler:&nbsp;mux,
+	}
+
+	//&nbsp;监听端口
+	if&nbsp;listener,&nbsp;err&nbsp;=&nbsp;net.Listen("tcp",&nbsp;":"&nbsp;+&nbsp;strconv.Itoa(G_config.ServicePort));&nbsp;err&nbsp;!=&nbsp;nil&nbsp;{
+		return
+	}
+
+	//&nbsp;拉起服务
+	go&nbsp;server.ServeTLS(listener,&nbsp;G_config.ServerPem,&nbsp;G_config.ServerKey)</pre><p>除了使用ServeTLS来启动支持HTTPS/2特性的服务端之外，还可以通过<a href="https://godoc.org/golang.org/x/net/http2#ConfigureServer">http2.ConfigureServer</a>来为http.Server启动HTTPS/2特性并直接使用Serve来启动服务。</p><h2>客户端</h2><p>客户端最重要的是配置Transport，所谓Transport就是底层的连接管理器，包括了协议的处理能力。</p><p>因为我们有很多定制化Client配置的需求，所以我们自己生成了一个Transport而不是内置的Transport：</p><pre>	transport&nbsp;=&nbsp;&amp;http.Transport{
+		TLSClientConfig:&nbsp;&amp;tls.Config{InsecureSkipVerify:&nbsp;true,},	//&nbsp;不校验服务端证书
+		MaxIdleConns:&nbsp;G_config.GatewayMaxConnection,
+		MaxIdleConnsPerHost:&nbsp;G_config.GatewayMaxConnection,
+		IdleConnTimeout:&nbsp;time.Duration(G_config.GatewayIdleTimeout)&nbsp;*&nbsp;time.Second,	//&nbsp;连接空闲超时
+	}</pre><p>其中TLS配置声明了InsecureSkipVerify=true，表示不向CA校验证书的有效性。</p><p>类似于服务端，因为我们没有使用内置的Client Transport，所以我们需要使用<a href="https://godoc.org/golang.org/x/net/http2#ConfigureTransport">http2.ConfigureTransport</a>来启动HTTPS/2特性：</p><pre>	//&nbsp;启动HTTP/2协议
+	http2.ConfigureTransport(transport)</pre><p>最后将Transport配置给Client，负责底层的连接与协议管理：</p><pre>	//&nbsp;HTTP/2&nbsp;客户端
+	gateConn.client&nbsp;=&nbsp;&amp;http.Client{
+		Transport:&nbsp;transport,
+		Timeout:&nbsp;time.Duration(G_config.GatewayTimeout)&nbsp;*&nbsp;time.Millisecond,&nbsp;//&nbsp;请求超时
+	}</pre><h1>最后</h1><p>首先理解h2和h2c的区别，然后明确Go语言推荐使用h2。</p><p>最后，当我们没有使用默认的http配置时，我们需要通过http2.ConfigureXXX重新配置启用HTTP2/S特性。</p><p><br></p></div>
+					<div>
+						<div class=""></div>
+						<div class="showMore"><span>点击查看更多内容</span></div>
+					</div>
+				</div>
+				<!-- 标签 -->
+												<div class="cat-box">
+					<div class="cat-wrap clearfix">
+																		<a class="cat l" href="http://www.imooc.com/article/tag/31" target="_blank">Go</a>
+											</div>
+											<div class="original-warp">
+							<p class="original">本文原创发布于慕课网 ，转载请注明出处，谢谢合作</p>    
+						</div>                    
+					                    				</div>
+								<!-- 推荐 --> 
+				<div class="praise-box">
+										<button id="js-praise"><span class="imv2-thumb_up"></span><div style="position: absolute; top: 50%; left: 50%; width: 230px; height: 230px; margin-left: -115px; margin-top: -115px; opacity: 0.6; display: none; transform: rotate(0deg) translate(0px, 0px);"><svg style="position: absolute; width: 100%; height: 100%;"><ellipse cy="0" cx="0" ry="15" rx="15" transform="rotate(0,0,0)" fill-opacity="1" stroke-linecap="" stroke-dashoffset="NaN " fill="#F9B552" stroke-dasharray="NaN " stroke-opacity="1" stroke-width="0" stroke="transparent" style="opacity: 1; display: none;"></ellipse><ellipse cy="0" cx="0" ry="15" rx="15" transform="rotate(0,0,0)" fill-opacity="1" stroke-linecap="" stroke-dashoffset="NaN " fill="#F9B552" stroke-dasharray="NaN " stroke-opacity="1" stroke-width="0" stroke="transparent" style="opacity: 1; display: none;"></ellipse><ellipse cy="0" cx="0" ry="15" rx="15" transform="rotate(0,0,0)" fill-opacity="1" stroke-linecap="" stroke-dashoffset="NaN " fill="#F9B552" stroke-dasharray="NaN " stroke-opacity="1" stroke-width="0" stroke="transparent" style="opacity: 1; display: none;"></ellipse><ellipse cy="0" cx="0" ry="15" rx="15" transform="rotate(0,0,0)" fill-opacity="1" stroke-linecap="" stroke-dashoffset="NaN " fill="#F9B552" stroke-dasharray="NaN " stroke-opacity="1" stroke-width="0" stroke="transparent" style="opacity: 1; display: none;"></ellipse><ellipse cy="0" cx="0" ry="15" rx="15" transform="rotate(0,0,0)" fill-opacity="1" stroke-linecap="" stroke-dashoffset="NaN " fill="#F9B552" stroke-dasharray="NaN " stroke-opacity="1" stroke-width="0" stroke="transparent" style="opacity: 1; display: none;"></ellipse><ellipse cy="0" cx="0" ry="15" rx="15" transform="rotate(0,0,0)" fill-opacity="1" stroke-linecap="" stroke-dashoffset="NaN " fill="#F9B552" stroke-dasharray="NaN " stroke-opacity="1" stroke-width="0" stroke="transparent" style="opacity: 1; display: none;"></ellipse></svg></div><div style="position: absolute; top: 50%; left: 50%; width: 180px; height: 180px; margin-left: -90px; margin-top: -90px; opacity: 0.6; display: none; transform: translate(0px, 0px);"><svg style="position: absolute; width: 100%; height: 100%;"><ellipse cy="90" cx="90" ry="0" rx="0" transform="rotate(0,90,90)" fill-opacity="transparent" stroke-linecap="" stroke-dashoffset="" fill="transparent" stroke-dasharray="" stroke-opacity="1" stroke-width="20" stroke="#F9B552"></ellipse></svg></div></button>
+										<div class="num-person"><em class="num">7</em>人点赞</div>
+					<div class="praise-share icon-drop_up hide">
+						<div class="praise-share-box">
+							<p>若觉得本文不错，就分享一下吧！</p>
+							<div class="share-content bdsharebuttonbox bdshare-button-style0-16" data-bd-bind="1581065995394">
+								<div class="icon-warp">
+									<a onclick="_hmt.push([&#39;_trackEvent&#39;, &#39;sjtj_top&#39;, &#39;share&#39;, &#39;wx&#39;])" data-track="topshare-1-1" href="http://www.imooc.com/article/details/id/78928#" class="bds_weixin icon-nav imv2-weixin_c share-icon" data-cmd="weixin" title="分享到微信"></a>
+								</div>
+								<div class="icon-warp">
+									<a onclick="_hmt.push([&#39;_trackEvent&#39;, &#39;sjtj_top&#39;, &#39;share&#39;, &#39;wb&#39;])" data-track="topshare-1-2" href="http://www.imooc.com/article/details/id/78928#" class="bds_tsina icon-nav imv2-weibo_c share-icon" data-cmd="tsina" title="分享到新浪微博"></a>
+								</div>
+								<div class="icon-warp">
+									<a onclick="_hmt.push([&#39;_trackEvent&#39;, &#39;sjtj_top&#39;, &#39;share&#39;, &#39;qq&#39;])" data-track="topshare-1-3" href="http://www.imooc.com/article/details/id/78928#" class="bds_qzone icon-nav imv2-qq_c share-icon" data-cmd="qzone" title="分享到QQ空间"></a>    
+								</div> 
+							</div>
+						</div>	
+					</div>
+				</div>
+				<!-- 推荐end -->
+			</div>
+
+			
+		</div>	
+
+		<div id="articleReply" style="display: block;"><div><img src="./Golang使用HTTP_2的正确方法_慕课手记_files/5dcba70c09df050213120400.jpg"></div><div></div></div>
+
+		<div class="opus-wrap clearfix">
+			<div class="detail-left">
+				<div class="df-title" id="all_comments"><span class="comment-num"><i>0</i></span> 评论</div>
+				<div class="detail-feedback-wrap">
+					<!-- 评论框 -->
+					<div class="df-ipt-wrap clearfix" id="comment">
+					
+						<div class="feeds-author l">
+							
+							评论
+							
+						</div>
+						<p class="fadeInput l js-showcommentModal">共同学习，写下你的评论</p>
+					
+					</div>
+					<!-- 评论框end -->
+					<!-- 评论 -->
+					<div id="js-feedback-list-wrap" class="feedback-list js-feedback-lookimg"><p class="feedback-none">暂无评论</p></div>
+					<!-- 分页页码  -->
+					<!-- <div class="qa-comment-page hide"></div> -->
+
+					<div class="qa-comment-page hide" style="display: none;">
+						<div class="moreBtn js-more" data-page="2">展开查看更多评论</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="article_wrap">
+			<div class="line_con">
+				<p class="line"></p>
+				<p class="line_text">相关文章推荐</p>
+			</div>
+			<div class="article-wrapper">
+				<div class="articleCon js-articleCon js-usercard-box">
+					
+				</div>
+				
+				<div class="feed-loading js-feed-loading" data-page="1">
+					<i class="imv2-loading"></i><span>正在加载中</span>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="right_recommend r">
+				<!-- 作者信息 -->
+		<div class="author_info js-author_info clearfix">
+			<a href="http://www.imooc.com/u/3900685/articles" class="l img_con" title="小鱼儿老师" target="_blank">
+				<img src="./Golang使用HTTP_2的正确方法_慕课手记_files/5b56967200018f7a08781240-100-100.jpg">
+			</a>
+			<div class="text_con l">
+				<div class="name_con clearfix">
+					<p class="name l">
+					 	<a class="nick" href="http://www.imooc.com/u/3900685/articles" title="小鱼儿老师" target="_blank">
+						小鱼儿老师
+						</a>
+					</p>
+											<p class="forward">
+							<span class="js-add-follow" data-uid="3900685" data-type="1">关注</span>
+						</p>
+									</div>
+				<div class="job">
+					<span class="job-title" title="全栈工程师">全栈工程师</span>
+					<span class="job-icon">
+																		<i class="user-icon great" title="认证作者"></i>
+						       
+											</span>
+				</div>
+				<div class="contribution clearfix">
+					<a href="http://www.imooc.com/u/3900685/articles" target="_blank" class="js-article-num l">
+						<span>5</span> 篇手记
+					</a>
+					<a href="http://www.imooc.com/u/3900685/articles" target="_blank" class="js-article-words l">
+						贡献 <span>13113</span> 字
+					</a>
+				</div>
+			</div>
+		</div>   
+		<!-- 作者信息end -->
+				<!-- 作者相关文章 -->
+				<div class="other_article js-other_article clearfix">
+			<div class="title l">作者相关文章</div>
+			<div class="more r">
+				<a href="http://www.imooc.com/u/3900685/articles" target="_blank">更多<i class="imv2-arrow2_r"></i></a>
+			</div>
+			<ul class="l">
+						<!-- 产品要求最多3个 -->
+									<li class="article-item clearfix">
+						<i class="imv2-shouji l"></i>
+						<a href="http://www.imooc.com/article/78927" class="l" target="_blank">
+							GO千万级消息推送服务
+						</a>
+					</li>
+										<!-- 产品要求最多3个 -->
+									<li class="article-item clearfix">
+						<i class="imv2-shouji l"></i>
+						<a href="http://www.imooc.com/article/78938" class="l" target="_blank">
+							谈谈golang的rpc
+						</a>
+					</li>
+										<!-- 产品要求最多3个 -->
+									<li class="article-item clearfix">
+						<i class="imv2-shouji l"></i>
+						<a href="http://www.imooc.com/article/78936" class="l" target="_blank">
+							golang结构体标签与反射
+						</a>
+					</li>
+										<!-- 产品要求最多3个 -->
+										</ul>
+		</div>
+				<!-- 作者相关文章end -->
+		<!-- 专栏推荐手记详情右侧 -->
+		<!--推荐专栏 手记首页右侧和手记详情页右侧使用此模块-->
+<div class="column_recommend js-column_recommend">
+    <div class="title">
+        慕课专栏 
+        <a href="http://www.imooc.com/read" target="_blank" class="more">更多<i class="imv2-arrow2_r"></i></a>
+    </div>
+    <ul>
+                    <li class="clearfix">
+                <a href="http://www.imooc.com/read/40?mc_marking=44ee00c1743acd07efc164e2dd6e79c4&amp;mc_channel=sjxqzl" target="_blank">
+                    <div class="img l" style="background-image:url(//img3.mukewang.com/5d22a6be0001d12805400720.jpg)">
+                         
+                    </div>
+                </a>
+                <div class="text_con l">
+                    <a href="http://www.imooc.com/read/40?mc_marking=44ee00c1743acd07efc164e2dd6e79c4&amp;mc_channel=sjxqzl" target="_blank">
+                        <p class="title">零基础实现微信电商小程序开发</p>
+                    </a>
+                    <div class="info">
+                        <span>共50小节</span>
+                        <i class="imv2-dot_samll"></i>
+                        <span>659人已购买</span>
+                    </div>
+                    <div class="price_con clearfix">
+                                                    <a href="javascript:;" onclick="$(&#39;#js-signin-btn&#39;).click();">
+                                <div class="goBuy r">马上订阅</div>
+                            </a>
+                         
+                                                                                    <p class="ori l">¥ 68.00</p>
+                                                                            
+                    </div>
+                </div>
+            </li>
+                    <li class="clearfix">
+                <a href="http://www.imooc.com/read/27?mc_marking=44ee00c1743acd07efc164e2dd6e79c4&amp;mc_channel=sjxqzl" target="_blank">
+                    <div class="img l" style="background-image:url(//img3.mukewang.com/5cd10384000145f305400720.jpg)">
+                         
+                    </div>
+                </a>
+                <div class="text_con l">
+                    <a href="http://www.imooc.com/read/27?mc_marking=44ee00c1743acd07efc164e2dd6e79c4&amp;mc_channel=sjxqzl" target="_blank">
+                        <p class="title">用技术人的眼光看世界 • 程序员技术指北</p>
+                    </a>
+                    <div class="info">
+                        <span>共62小节</span>
+                        <i class="imv2-dot_samll"></i>
+                        <span>1209人已购买</span>
+                    </div>
+                    <div class="price_con clearfix">
+                                                    <a href="javascript:;" onclick="$(&#39;#js-signin-btn&#39;).click();">
+                                <div class="goBuy r">马上订阅</div>
+                            </a>
+                         
+                                                                                    <p class="ori l">¥ 99.00</p>
+                                                                            
+                    </div>
+                </div>
+            </li>
+            </ul>
+</div>
+
+		<div id="articleDetailRight" style="display: block;" class=""><div><img src="./Golang使用HTTP_2的正确方法_慕课手记_files/5dfadf66098cef3702800140.jpg"></div><div></div></div>
+		<!-- 相关课程 -->
+		<div class="related_lessons js-related_lessons"><div class="title">相关课程</div><ul class="moco-aside-course"><li><div class="aside-course-img"><img src="./Golang使用HTTP_2的正确方法_慕课手记_files/5a7127370001a8fa05400300-360-202.jpg"><p class="aside-course-type">实战</p></div><div class="aside-course-content"><a href="http://coding.imooc.com/class/180.html?mc_marking=4655172e1a62839eea65105dbf244230&amp;mc_channel=sjkctjpc" class="aside-course-name" target="_blank">Google资深工程师深度讲解Go语言</a><p class="aside-course-price"><span>￥399</span></p><div class="aside-course-dot"><i class="imv2-dot_samll"></i></div><p class="aside-course-grade">中级</p><div class="aside-course-dot"><i class="imv2-dot_samll"></i></div><p class="aside-course-people"><i class="imv2-set-sns"></i><span>3337</span></p></div></li><li><div class="aside-course-img"><img src="./Golang使用HTTP_2的正确方法_慕课手记_files/5b1121f70001ff3205400300-360-202.jpg"><p class="aside-course-type">实战</p></div><div class="aside-course-content"><a href="http://coding.imooc.com/class/227.html?mc_marking=4655172e1a62839eea65105dbf244230&amp;mc_channel=sjkctjpc" class="aside-course-name" target="_blank">Go语言实战流媒体视频网站</a><p class="aside-course-price"><span>￥266</span></p><div class="aside-course-dot"><i class="imv2-dot_samll"></i></div><p class="aside-course-grade">中级</p><div class="aside-course-dot"><i class="imv2-dot_samll"></i></div><p class="aside-course-people"><i class="imv2-set-sns"></i><span>743</span></p></div></li><li><div class="aside-course-img"><img src="./Golang使用HTTP_2的正确方法_慕课手记_files/5bbc82dd000134e012000676-360-202.jpg"><p class="aside-course-type">实战</p></div><div class="aside-course-content"><a href="http://coding.imooc.com/class/281.html?mc_marking=4655172e1a62839eea65105dbf244230&amp;mc_channel=sjkctjpc" class="aside-course-name" target="_blank">Go语言开发分布式任务调度 轻松搞定高性能Crontab </a><p class="aside-course-price"><span>￥299</span></p><div class="aside-course-dot"><i class="imv2-dot_samll"></i></div><p class="aside-course-grade">中级</p><div class="aside-course-dot"><i class="imv2-dot_samll"></i></div><p class="aside-course-people"><i class="imv2-set-sns"></i><span>717</span></p></div></li><li><div class="aside-course-img"><img src="./Golang使用HTTP_2的正确方法_慕课手记_files/5b55b3f400017b9906000338-240-135.jpg"></div><div class="aside-course-content"><a href="http://www.imooc.com/learn/1025?mc_marking=4655172e1a62839eea65105dbf244230&amp;mc_channel=sjkctjpc" class="aside-course-name" target="_blank">GO实现千万级WebSocket消息推送服务</a><p class="aside-course-grade">中级</p><div class="aside-course-dot"><i class="imv2-dot_samll"></i></div><p class="aside-course-people"><i class="imv2-set-sns"></i><span>14586</span></p></div></li><li><div class="aside-course-img"><img src="./Golang使用HTTP_2的正确方法_慕课手记_files/57035f4a0001598106000338-240-135.jpg"></div><div class="aside-course-content"><a href="http://www.imooc.com/learn/345?mc_marking=4655172e1a62839eea65105dbf244230&amp;mc_channel=sjkctjpc" class="aside-course-name" target="_blank">Go语言第一课</a><p class="aside-course-grade">入门</p><div class="aside-course-dot"><i class="imv2-dot_samll"></i></div><p class="aside-course-people"><i class="imv2-set-sns"></i><span>91561</span></p></div></li><li><div class="aside-course-img"><img src="./Golang使用HTTP_2的正确方法_慕课手记_files/5836c00a0001916906000338-228-128.jpg"><p class="aside-course-type">金职位</p></div><div class="aside-course-content"><a href="http://class.imooc.com/sc/2?mc_marking=4655172e1a62839eea65105dbf244230&amp;mc_channel=sjkctjpc" class="aside-course-name" target="_blank">HTML5与CSS3实现动态网页 2018</a><p class="aside-course-price"><span>￥628</span></p><div class="aside-course-dot"><i class="imv2-dot_samll"></i></div><p class="aside-course-grade">5步骤/29门课</p><div class="aside-course-dot"><i class="imv2-dot_samll"></i></div><p class="aside-course-people"><i class="imv2-set-sns"></i><span>1887</span></p></div></li></ul></div>
+		<!-- 相关课程end -->
+	</div>
+</div>
+<div class="bottom-fixed js-bottom-fixed hide">
+	<ul class="bottom-wrap clearfix">
+		<!-- 推荐 --> 
+		<li class="praise-box l">
+						<button id="js-praise-bottom"><span class="imv2-thumb_up"></span></button>
+										<span class="praise-num">7</span>
+					</li>
+		<!-- 推荐end -->
+		<li class="icon-warp l">
+			<a onclick="_hmt.push([&#39;_trackEvent&#39;, &#39;sjtj_left&#39;, &#39;share&#39;, &#39;pl&#39;])" data-track="pl-1-1" href="http://www.imooc.com/article/details/id/78928#comment" class="icon-nav imv2-chat_bubble" title="评论"></a>  
+							<span class="comment-num">评论</span>
+					</li>
+		<li class="icon-warp l">
+							<a onclick="_hmt.push([&#39;_trackEvent&#39;, &#39;sjtj_left&#39;, &#39;share&#39;, &#39;sc&#39;])" data-track="sc-1-1" data-id="78928" href="javascript:" class="js-follow icon-nav icon-star2 " title="收藏"></a>
+				<span>收藏</span>   
+					</li>     
+		<li class="input l js-showcommentModal">共同学习，写下你的评论</li>
+		<li class="icon-warp2 l">
+			<a class="js-forward-btn imv2-forward1 icon-nav2" href="http://www.imooc.com/article/details/id/78928#">
+			</a>
+			<a onclick="_hmt.push([&#39;_trackEvent&#39;, &#39;sjtj_left&#39;, &#39;share&#39;, &#39;wx&#39;])" data-track="letfshare-1-1" href="http://www.imooc.com/article/details/id/78928#" class="bds_weixin icon-nav2 icon-share-weichat share-icon" data-cmd="weixin" title="分享到微信"></a>
+			<a onclick="_hmt.push([&#39;_trackEvent&#39;, &#39;sjtj_left&#39;, &#39;share&#39;, &#39;wb&#39;])" data-track="letfshare-1-2" href="http://www.imooc.com/article/details/id/78928#" class="bds_tsina icon-nav2 icon-share-weibo share-icon" data-cmd="tsina" title="分享到新浪微博"></a>
+			<a onclick="_hmt.push([&#39;_trackEvent&#39;, &#39;sjtj_left&#39;, &#39;share&#39;, &#39;qq&#39;])" data-track="letfshare-1-3" href="http://www.imooc.com/article/details/id/78928#" class="bds_qzone icon-nav2 icon-share-qq share-icon" data-cmd="qzone" title="分享到QQ空间"></a>                                  
+		</li>
+	</ul>
+</div>
+
+
+
+
+<div class="hide">
+	<input type="hidden" data-pic="5b9b24f30001cf1401920262" id="js-share-img">
+	<input type="hidden" data-pic="//img4.mukewang.com/5b56967200018f7a08781240-100-100.jpg" id="js-img-author">
+</div>
+<div class="r"></div>
+
+</div>
+
+
+<div id="J_GotoTop" class="elevator">
+    <a href="http://www.imooc.com/user/feedback" class="elevator-msg" target="_blank">
+        <i class="icon-feedback"></i>
+        <span class="">意见反馈</span>
+    </a>
+    <a href="http://order.imooc.com/pay/sharegoods" class="elevator-dist" style="display: none;" target="_blank">
+        <i class=""></i>
+        <span class="">分销返利</span>
+    </a>
+    <!-- <a href="//www.imooc.com/act/invite" class="elevator-dist" target="_blank">
+        <i class=""></i>
+        <span class="">邀请有奖</span>
+    </a> -->
+    <a href="http://www.imooc.com/help" class="elevator-faq" target="_blank">
+        <i class="icon-ques"></i>
+        <span class="">帮助中心</span>
+    </a>
+    <a href="http://www.imooc.com/mobile/app" target="_blank" class="elevator-app">
+        <i class="icon-appdownload"></i>
+        <span class="">APP下载</span>
+        <div class="elevator-app-box"></div>
+    </a>
+    <a href="javascript:void(0)" class="elevator-weixin no-goto" id="js-elevator-weixin">
+        <i class="icon-wxgzh"></i>
+        <span class="">官方微信</span>
+        <div class="elevator-weixin-box"></div>
+    </a>
+    <a href="javascript:void(0)" class="elevator-top no-goto" style="display: none;" id="backTop">
+        <i class="icon-up2"></i>
+        <span class="">返回顶部</span>
+    </a>
+</div>
+
+
+<div id="globalRightFloat"></div>
+
+
+
+
+
+
+<script type="text/javascript" charset="utf-8" src="./Golang使用HTTP_2的正确方法_慕课手记_files/ueditor.final.min.js.下载"></script>
+
+
+<!--script-->
+<script type="text/javascript" src="./Golang使用HTTP_2的正确方法_慕课手记_files/error.js.下载"></script>
+<script src="./Golang使用HTTP_2的正确方法_慕课手记_files/ssologin.js.下载"></script>
+<script type="text/javascript" src="./Golang使用HTTP_2的正确方法_慕课手记_files/sea.js.下载"></script>
+<script type="text/javascript" src="./Golang使用HTTP_2的正确方法_慕课手记_files/sea_config.js.下载"></script>
+<script type="text/javascript">seajs.use("/static/page/"+OP_CONFIG.module+"/"+OP_CONFIG.page);</script>
+
+<script type="text/javascript" src="./Golang使用HTTP_2的正确方法_慕课手记_files/dist-zhuge.js.下载"></script>
+
+<script type="text/javascript">seajs.use("/static/page/common/advertiseCheck.js");</script>
+
+<script>
+    //动态加载advertisementReportjs
+
+    var checkJQ = function(){
+        // console.log(typeof jQuery)
+       if(typeof jQuery != 'undefined') {
+           clearInterval(timer);
+           var scr = document.createElement('script');
+           scr.type="text/javascript";
+           scr.src="/static/page/common/advertisementReport.js";
+           document.body.appendChild(scr);
+
+       }
+    }
+    var timer = setInterval(checkJQ,1000);
+
+</script>
+
+
+<script src="./Golang使用HTTP_2的正确方法_慕课手记_files/captcha.min.js.下载"></script>
+<script>
+	// 处理长篇幅文章部分显示
+	var hideArticleInterval, htmlFilterInterval;
+	(function() {
+		hideArticleInterval = setInterval(function() {
+			contentEl = document.querySelector('.detail-content');
+			var height = contentEl.offsetHeight;
+			if(contentEl && height > 0) {
+				clearInterval(hideArticleInterval);
+				hideArticleInterval = null;
+				if(height > 3000) {
+					contentEl.className += ' long-content';
+				}
+				document.querySelector('.showMore span').addEventListener('click', function() {
+					$('.detail-content').removeClass('long-content');
+				});
+			}
+		},5);
+		htmlFilterInterval = setInterval(function() {
+			var articleBox = document.getElementById('article_content');
+			if(window.$ && $.fn.lazyload && articleBox) {
+				clearInterval(htmlFilterInterval);
+				htmlFilterInterval = null;
+				$(articleBox).replaceWith(articleEl);
+				if(twemoji){
+					twemoji.parse(document.body);
+				}
+				$('img.lazyload').lazyload({
+					load: function() {
+						$(this).removeClass('lazyload');
+					}
+				});
+			}
+		},5);
+	}());
+</script>
+<script>
+window.onload = function() {
+	zhuge.track('ContentPage', {
+			'Category': '手记',
+			'Name': 'Golang使用HTTP/2的正确方法',
+			'CID': '78928',
+			'Direction': '后端开发',
+			'Price': 0
+	});
+}
+</script>
+
+<div class="tipoff-block js-tipoff-block"></div>
+<div class="tipoff-box js-tipoff-box">
+	<div class="tipoff-top-box clearfix">
+		<p class="l tipoff-title">举报</p>
+		<span class="r tipoff-close-btn icon-close2 js-tipoff-close"></span>
+	</div>
+	<div class="tipoff-type-box js-tipoff-typebox clearfix">
+		<div class="tipoff-loading">
+		  	<div class="bounce1"></div>
+			<div class="bounce2"></div>
+			<div class="bounce3"></div>
+		</div>
+	</div>
+	<div class="tipoff-content">
+		<textarea name="tipoff-content" class="tipoff-desc js-tipoff-desc" placeholder="写下举报理由"></textarea>
+		<div class="tipoff-text"><span class="js-tipoff-text">0</span>/150</div>
+	</div>
+	<div class="tipoff-btn-box clearfix">
+		<div class="r tipoff-submit-btn js-tipoff-submit" data-tipofftype="">提交</div>
+		<div class="r tipoff-cancel-btn js-tipoff-close">取消</div>
+	</div>
+</div>
+
+
+
+
+
+
+
+
+<div style="display: none">
+<script type="text/javascript">
+var _hmt = _hmt || [];
+(function() {
+  var hm = document.createElement("script");
+  hm.src = "https://hm.baidu.com/hm.js?f0cfcccd7b1393990c78efdeebff3968";
+  var s = document.getElementsByTagName("script")[0];
+  s.parentNode.insertBefore(hm, s);
+})();
+(function (d) {
+window.bd_cpro_rtid="rHT4P1c";
+var s = d.createElement("script");s.type = "text/javascript";s.async = true;s.src = location.protocol + "//cpro.baidu.com/cpro/ui/rt.js";
+var s0 = d.getElementsByTagName("script")[0];s0.parentNode.insertBefore(s, s0);
+})(document);
+</script>
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+    }else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+</div>
+
+
+<script src="./Golang使用HTTP_2的正确方法_慕课手记_files/visual"></script><script type="text/javascript" src="./Golang使用HTTP_2的正确方法_慕课手记_files/advertisementReport.js.下载"></script><div></div><div style="position: absolute; top: 100px; left: 100px; width: 164px; height: 164px; margin-left: -82px; margin-top: -82px; opacity: 1; display: none; transform: rotate(0deg) translate(0px, 0px);"><svg style="position: absolute; width: 100%; height: 100%;"><ellipse cy="0" cx="0" ry="7" rx="7" transform="rotate(0,0,0)" fill-opacity="1" stroke-linecap="" stroke-dashoffset="NaN " fill="deeppink" stroke-dasharray="NaN " stroke-opacity="1" stroke-width="0" stroke="transparent" style="opacity: 1; display: none;"></ellipse><ellipse cy="0" cx="0" ry="7" rx="7" transform="rotate(0,0,0)" fill-opacity="1" stroke-linecap="" stroke-dashoffset="NaN " fill="deeppink" stroke-dasharray="NaN " stroke-opacity="1" stroke-width="0" stroke="transparent" style="opacity: 1; display: none;"></ellipse><ellipse cy="0" cx="0" ry="7" rx="7" transform="rotate(0,0,0)" fill-opacity="1" stroke-linecap="" stroke-dashoffset="NaN " fill="deeppink" stroke-dasharray="NaN " stroke-opacity="1" stroke-width="0" stroke="transparent" style="opacity: 1; display: none;"></ellipse><ellipse cy="0" cx="0" ry="7" rx="7" transform="rotate(0,0,0)" fill-opacity="1" stroke-linecap="" stroke-dashoffset="NaN " fill="deeppink" stroke-dasharray="NaN " stroke-opacity="1" stroke-width="0" stroke="transparent" style="opacity: 1; display: none;"></ellipse><ellipse cy="0" cx="0" ry="7" rx="7" transform="rotate(0,0,0)" fill-opacity="1" stroke-linecap="" stroke-dashoffset="NaN " fill="deeppink" stroke-dasharray="NaN " stroke-opacity="1" stroke-width="0" stroke="transparent" style="opacity: 1; display: none;"></ellipse></svg></div></body></html>
